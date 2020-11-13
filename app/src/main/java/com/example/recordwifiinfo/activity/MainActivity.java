@@ -10,19 +10,39 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.recordwifiinfo.R;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class MainActivity extends AppCompatActivity {
 
     WifiChangeReceiver wifiChangeReceiver;
+    //    WifiStateReceivere wifiStateReceivere;
+//    RssiReceiver rssiReceiver;
     TextView textView;
+    Button button;
+    com.example.recordwifiinfo.model.WifiInfo wifiInfo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,13 +56,54 @@ public class MainActivity extends AppCompatActivity {
             registerReceiver();
         }
         textView = findViewById(R.id.wifiInfo_textView);
+        button=findViewById(R.id.showInfo_button);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                readWifiInfo();
+            }
+        });
+        wifiInfo = new com.example.recordwifiinfo.model.WifiInfo();
+//        ConnectivityManager connectivityManager= (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+//        NetworkInfo networkInfo=connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+//        if (networkInfo.isConnected()){
+//            wifiInfo.setName(networkInfo.getExtraInfo());
+//        }
+    }
+
+    private void readWifiInfo() {
+        StringBuilder stringBuilder=new StringBuilder();
+        try {
+            FileInputStream inputStream = MainActivity.this.openFileInput("data");
+            BufferedReader reader=new BufferedReader(new InputStreamReader(inputStream));
+            String temp="";
+            while ((temp=reader.readLine())!=null){
+                stringBuilder.append(temp+"\n");
+            }
+            textView.setText(stringBuilder.toString());
+            reader.close();
+            inputStream.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private void registerReceiver() {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+//        IntentFilter intentFilter1=new IntentFilter();
+//        intentFilter1.addAction(WifiManager.RSSI_CHANGED_ACTION);
+//        IntentFilter intentFilter2=new IntentFilter();
+//        intentFilter1.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
         wifiChangeReceiver = new WifiChangeReceiver();
+//        wifiStateReceivere = new WifiStateReceivere();
+//        rssiReceiver = new RssiReceiver();
         registerReceiver(wifiChangeReceiver, intentFilter);
+//        registerReceiver(rssiReceiver, intentFilter1);
+//        registerReceiver(wifiStateReceivere, intentFilter2);
     }
 
     @Override
@@ -65,25 +126,67 @@ public class MainActivity extends AppCompatActivity {
         if (wifiChangeReceiver != null) {
             unregisterReceiver(wifiChangeReceiver);
         }
+//        if (wifiStateReceivere != null) {
+//            unregisterReceiver(wifiStateReceivere);
+//        }
+//        if (rssiReceiver != null) {
+//            unregisterReceiver(rssiReceiver);
+//        }
     }
+
+    int getWifiStrength() {
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+        WifiInfo info = wifiManager.getConnectionInfo();
+        int strength = info.getRssi();
+        return strength;
+    }
+
+    class WifiStateReceivere extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Toast.makeText(MainActivity.this, "wifi open and close", Toast.LENGTH_SHORT);
+        }
+    }
+
+    ;
+
+    class RssiReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Toast.makeText(MainActivity.this, "wifi 强度", Toast.LENGTH_SHORT);
+            wifiInfo.setWifiStrength(getWifiStrength());
+        }
+    }
+
+    ;
 
     class WifiChangeReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            Toast.makeText(MainActivity.this, "触发了", Toast.LENGTH_SHORT).show();
             NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
 //            WifiInfo wifiInfo = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
 //            String bssid = networkInfo.getExtraInfo();
             NetworkInfo.State state = networkInfo.getState();
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             if (state == NetworkInfo.State.CONNECTED) {
-                WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-                WifiInfo info = wifiManager.getConnectionInfo();
-                int strength = WifiManager.calculateSignalLevel(info.getRssi(), 5);
-                textView.setText("强度"+strength);
+                if (!networkInfo.getExtraInfo().equals(wifiInfo.getName())) {
+                    wifiInfo.setName(networkInfo.getExtraInfo());
+                    wifiInfo.setConnectDate(dateFormat.format(new Date()));
+                    recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.CONNECT);
+                }
+                wifiInfo.setDisconnectDate("");
+                wifiInfo.setWifiStrength(getWifiStrength());
+                textView.setText("连接：" + wifiInfo.getName());
             }
             if (state == NetworkInfo.State.DISCONNECTED) {
-                textView.setText("断开");
+                if (!"".equals(wifiInfo.getName())) {
+                    wifiInfo.setDisconnectDate(dateFormat.format(new Date()));
+                    recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.DISCONNECT);
+                    Log.d("ddaaas", "onReceive: " + wifiInfo.getName());
+                }
+                textView.setText("断开" + wifiInfo.getName());
+                wifiInfo.setName("");
             }
 //            if (state==NetworkInfo.State.CONNECTING){
 //                textView.setText("连接中");
@@ -93,5 +196,66 @@ public class MainActivity extends AppCompatActivity {
 //            }
         }
     }
+
+    void recordWifiInfo(int action) {
+        if (action == com.example.recordwifiinfo.model.WifiInfo.CONNECT) {
+            StringBuilder connectWifiInfo = new StringBuilder();
+            connectWifiInfo.append("连接：" + wifiInfo.getName() + "\n");
+            connectWifiInfo.append("连接时间：" + wifiInfo.getConnectDate() + "\n");
+            connectWifiInfo.append("信号强度：" + wifiInfo.getWifiStrength() + "\n");
+            try {
+                FileOutputStream outputStream = openFileOutput("data",MODE_APPEND);
+                BufferedWriter bufferedWriter=new BufferedWriter(new OutputStreamWriter(outputStream));
+                try {
+                    bufferedWriter.write(connectWifiInfo.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }finally {
+                    if (bufferedWriter!=null){
+                        try {
+                            bufferedWriter.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                outputStream.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if (action == com.example.recordwifiinfo.model.WifiInfo.DISCONNECT) {
+            StringBuilder disconnectWifiInfo = new StringBuilder();
+            disconnectWifiInfo.append("断开：" + wifiInfo.getName() + "\n");
+            disconnectWifiInfo.append("断开时间：" + wifiInfo.getDisconnectDate() + "\n");
+            disconnectWifiInfo.append("信号强度：" + wifiInfo.getWifiStrength() + "\n");
+            try {
+                FileOutputStream outputStream = openFileOutput("data",MODE_APPEND);
+                BufferedWriter bufferedWriter=new BufferedWriter(new OutputStreamWriter(outputStream));
+                try {
+                    bufferedWriter.write(disconnectWifiInfo.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }finally {
+                    if (bufferedWriter!=null){
+                        try {
+                            bufferedWriter.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                outputStream.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
 
 }
