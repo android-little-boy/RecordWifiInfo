@@ -38,8 +38,6 @@ import java.util.Date;
 public class MainActivity extends AppCompatActivity {
 
     WifiChangeReceiver wifiChangeReceiver;
-    //    WifiStateReceivere wifiStateReceivere;
-//    RssiReceiver rssiReceiver;
     TextView textView;
     Button button;
     com.example.recordwifiinfo.model.WifiInfo wifiInfo;
@@ -64,11 +62,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         wifiInfo = new com.example.recordwifiinfo.model.WifiInfo();
-//        ConnectivityManager connectivityManager= (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-//        NetworkInfo networkInfo=connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-//        if (networkInfo.isConnected()){
-//            wifiInfo.setName(networkInfo.getExtraInfo());
-//        }
     }
 
     private void readWifiInfo() {
@@ -94,16 +87,9 @@ public class MainActivity extends AppCompatActivity {
     private void registerReceiver() {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-//        IntentFilter intentFilter1=new IntentFilter();
-//        intentFilter1.addAction(WifiManager.RSSI_CHANGED_ACTION);
-//        IntentFilter intentFilter2=new IntentFilter();
-//        intentFilter1.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WifiManager.RSSI_CHANGED_ACTION);
         wifiChangeReceiver = new WifiChangeReceiver();
-//        wifiStateReceivere = new WifiStateReceivere();
-//        rssiReceiver = new RssiReceiver();
         registerReceiver(wifiChangeReceiver, intentFilter);
-//        registerReceiver(rssiReceiver, intentFilter1);
-//        registerReceiver(wifiStateReceivere, intentFilter2);
     }
 
     @Override
@@ -126,12 +112,6 @@ public class MainActivity extends AppCompatActivity {
         if (wifiChangeReceiver != null) {
             unregisterReceiver(wifiChangeReceiver);
         }
-//        if (wifiStateReceivere != null) {
-//            unregisterReceiver(wifiStateReceivere);
-//        }
-//        if (rssiReceiver != null) {
-//            unregisterReceiver(rssiReceiver);
-//        }
     }
 
     int getWifiStrength() {
@@ -141,59 +121,38 @@ public class MainActivity extends AppCompatActivity {
         return strength;
     }
 
-    class WifiStateReceivere extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Toast.makeText(MainActivity.this, "wifi open and close", Toast.LENGTH_SHORT);
-        }
-    }
-
-    ;
-
-    class RssiReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Toast.makeText(MainActivity.this, "wifi 强度", Toast.LENGTH_SHORT);
-            wifiInfo.setWifiStrength(getWifiStrength());
-        }
-    }
-
-    ;
-
     class WifiChangeReceiver extends BroadcastReceiver {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
-//            WifiInfo wifiInfo = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
-//            String bssid = networkInfo.getExtraInfo();
-            NetworkInfo.State state = networkInfo.getState();
-            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            if (state == NetworkInfo.State.CONNECTED) {
-                if (!networkInfo.getExtraInfo().equals(wifiInfo.getName())) {
-                    wifiInfo.setName(networkInfo.getExtraInfo());
-                    wifiInfo.setConnectDate(dateFormat.format(new Date()));
-                    recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.CONNECT);
+            if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)){
+                NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+                NetworkInfo.State state = networkInfo.getState();
+                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                if (state == NetworkInfo.State.CONNECTED) {
+                    if (!networkInfo.getExtraInfo().equals(wifiInfo.getName())) {
+                        wifiInfo.setName(networkInfo.getExtraInfo());
+                        wifiInfo.setConnectDate(dateFormat.format(new Date()));
+                        recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.CONNECT);
+                    }
+                    wifiInfo.setDisconnectDate("");
+                    wifiInfo.setWifiStrength(getWifiStrength());
+                    textView.setText("连接：" + wifiInfo.getName());
                 }
-                wifiInfo.setDisconnectDate("");
-                wifiInfo.setWifiStrength(getWifiStrength());
-                textView.setText("连接：" + wifiInfo.getName());
-            }
-            if (state == NetworkInfo.State.DISCONNECTED) {
-                if (!"".equals(wifiInfo.getName())) {
-                    wifiInfo.setDisconnectDate(dateFormat.format(new Date()));
-                    recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.DISCONNECT);
-                    Log.d("ddaaas", "onReceive: " + wifiInfo.getName());
+                if (state == NetworkInfo.State.DISCONNECTED) {
+                    if (!"".equals(wifiInfo.getName())) {
+                        wifiInfo.setDisconnectDate(dateFormat.format(new Date()));
+                        recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.DISCONNECT);
+                        Log.d("ddaaas", "onReceive: " + wifiInfo.getName());
+                    }
+                    textView.setText("断开" + wifiInfo.getName());
+                    wifiInfo.setName("");
                 }
-                textView.setText("断开" + wifiInfo.getName());
-                wifiInfo.setName("");
             }
-//            if (state==NetworkInfo.State.CONNECTING){
-//                textView.setText("连接中");
-//            }
-//            if (state==NetworkInfo.State.DISCONNECTING){
-//                textView.setText("断开中");
-//            }
+            if (intent.getAction().equals(WifiManager.RSSI_CHANGED_ACTION)){
+                Toast.makeText(context,"强度变化",Toast.LENGTH_SHORT);
+            }
+
         }
     }
 
