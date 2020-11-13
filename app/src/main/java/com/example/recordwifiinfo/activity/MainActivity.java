@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
             registerReceiver();
         }
         textView = findViewById(R.id.wifiInfo_textView);
-        button=findViewById(R.id.showInfo_button);
+        button = findViewById(R.id.showInfo_button);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -65,13 +65,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void readWifiInfo() {
-        StringBuilder stringBuilder=new StringBuilder();
+        StringBuilder stringBuilder = new StringBuilder();
         try {
             FileInputStream inputStream = MainActivity.this.openFileInput("data");
-            BufferedReader reader=new BufferedReader(new InputStreamReader(inputStream));
-            String temp="";
-            while ((temp=reader.readLine())!=null){
-                stringBuilder.append(temp+"\n");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            String temp = "";
+            while ((temp = reader.readLine()) != null) {
+                stringBuilder.append(temp + "\n");
             }
             textView.setText(stringBuilder.toString());
             reader.close();
@@ -125,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)){
+            if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
                 NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
                 NetworkInfo.State state = networkInfo.getState();
                 DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -133,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
                     if (!networkInfo.getExtraInfo().equals(wifiInfo.getName())) {
                         wifiInfo.setName(networkInfo.getExtraInfo());
                         wifiInfo.setConnectDate(dateFormat.format(new Date()));
+                        wifiInfo.setWifiStrength(getWifiStrength());
                         recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.CONNECT);
                     }
                     wifiInfo.setDisconnectDate("");
@@ -149,8 +150,8 @@ public class MainActivity extends AppCompatActivity {
                     wifiInfo.setName("");
                 }
             }
-            if (intent.getAction().equals(WifiManager.RSSI_CHANGED_ACTION)){
-                Toast.makeText(context,"强度变化",Toast.LENGTH_SHORT);
+            if (intent.getAction().equals(WifiManager.RSSI_CHANGED_ACTION)) {
+                wifiInfo.setWifiStrength(getWifiStrength());
             }
 
         }
@@ -163,14 +164,14 @@ public class MainActivity extends AppCompatActivity {
             connectWifiInfo.append("连接时间：" + wifiInfo.getConnectDate() + "\n");
             connectWifiInfo.append("信号强度：" + wifiInfo.getWifiStrength() + "\n");
             try {
-                FileOutputStream outputStream = openFileOutput("data",MODE_APPEND);
-                BufferedWriter bufferedWriter=new BufferedWriter(new OutputStreamWriter(outputStream));
+                FileOutputStream outputStream = openFileOutput("data", MODE_APPEND);
+                BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
                 try {
                     bufferedWriter.write(connectWifiInfo.toString());
                 } catch (IOException e) {
                     e.printStackTrace();
-                }finally {
-                    if (bufferedWriter!=null){
+                } finally {
+                    if (bufferedWriter != null) {
                         try {
                             bufferedWriter.close();
                         } catch (IOException e) {
@@ -191,14 +192,14 @@ public class MainActivity extends AppCompatActivity {
             disconnectWifiInfo.append("断开时间：" + wifiInfo.getDisconnectDate() + "\n");
             disconnectWifiInfo.append("信号强度：" + wifiInfo.getWifiStrength() + "\n");
             try {
-                FileOutputStream outputStream = openFileOutput("data",MODE_APPEND);
-                BufferedWriter bufferedWriter=new BufferedWriter(new OutputStreamWriter(outputStream));
+                FileOutputStream outputStream = openFileOutput("data", MODE_APPEND);
+                BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
                 try {
                     bufferedWriter.write(disconnectWifiInfo.toString());
                 } catch (IOException e) {
                     e.printStackTrace();
-                }finally {
-                    if (bufferedWriter!=null){
+                } finally {
+                    if (bufferedWriter != null) {
                         try {
                             bufferedWriter.close();
                         } catch (IOException e) {
