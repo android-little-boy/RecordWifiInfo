@@ -1,6 +1,7 @@
 package com.example.recordwifiinfo.activity;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -12,15 +13,18 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.recordwifiinfo.MyService;
 import com.example.recordwifiinfo.R;
 
 import java.io.BufferedReader;
@@ -37,21 +41,22 @@ import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
-    WifiChangeReceiver wifiChangeReceiver;
     TextView textView;
     Button button;
     com.example.recordwifiinfo.model.WifiInfo wifiInfo;
+    Intent intent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        intent=new Intent(this, MyService.class);
         if (ContextCompat.checkSelfPermission(this, android.Manifest
                 .permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{android.Manifest
                     .permission.WRITE_EXTERNAL_STORAGE}, 1);
         } else {
-            registerReceiver();
+            startFloatingService();
         }
         textView = findViewById(R.id.wifiInfo_textView);
         button = findViewById(R.id.showInfo_button);
@@ -62,6 +67,28 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         wifiInfo = new com.example.recordwifiinfo.model.WifiInfo();
+    }
+    public void startFloatingService() {
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "当前无权限，请授权", Toast.LENGTH_SHORT);
+            startActivityForResult(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())), 0);
+        } else {
+            startService(intent);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 0) {
+            if (!Settings.canDrawOverlays(this)) {
+                Toast.makeText(this, "授权失败", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "授权成功", Toast.LENGTH_SHORT).show();
+                startService(intent);
+            }
+        }
+
     }
 
     private void readWifiInfo() {
@@ -84,14 +111,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void registerReceiver() {
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-        intentFilter.addAction(WifiManager.RSSI_CHANGED_ACTION);
-        wifiChangeReceiver = new WifiChangeReceiver();
-        registerReceiver(wifiChangeReceiver, intentFilter);
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == 1) {
@@ -102,119 +121,14 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
             }
-            registerReceiver();
+            startFloatingService();
         }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (wifiChangeReceiver != null) {
-            unregisterReceiver(wifiChangeReceiver);
-        }
-    }
-
-    int getWifiStrength() {
-        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-        WifiInfo info = wifiManager.getConnectionInfo();
-        int strength = info.getRssi();
-        return strength;
-    }
-
-    class WifiChangeReceiver extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
-                NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
-                NetworkInfo.State state = networkInfo.getState();
-                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                if (state == NetworkInfo.State.CONNECTED) {
-                    if (!networkInfo.getExtraInfo().equals(wifiInfo.getName())) {
-                        wifiInfo.setName(networkInfo.getExtraInfo());
-                        wifiInfo.setConnectDate(dateFormat.format(new Date()));
-                        wifiInfo.setWifiStrength(getWifiStrength());
-                        recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.CONNECT);
-                    }
-                    wifiInfo.setDisconnectDate("");
-                    wifiInfo.setWifiStrength(getWifiStrength());
-                    textView.setText("连接：" + wifiInfo.getName());
-                }
-                if (state == NetworkInfo.State.DISCONNECTED) {
-                    if (!"".equals(wifiInfo.getName())) {
-                        wifiInfo.setDisconnectDate(dateFormat.format(new Date()));
-                        recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.DISCONNECT);
-                        Log.d("ddaaas", "onReceive: " + wifiInfo.getName());
-                    }
-                    textView.setText("断开" + wifiInfo.getName());
-                    wifiInfo.setName("");
-                }
-            }
-            if (intent.getAction().equals(WifiManager.RSSI_CHANGED_ACTION)) {
-                wifiInfo.setWifiStrength(getWifiStrength());
-            }
-
-        }
-    }
-
-    void recordWifiInfo(int action) {
-        if (action == com.example.recordwifiinfo.model.WifiInfo.CONNECT) {
-            StringBuilder connectWifiInfo = new StringBuilder();
-            connectWifiInfo.append("连接：" + wifiInfo.getName() + "\n");
-            connectWifiInfo.append("连接时间：" + wifiInfo.getConnectDate() + "\n");
-            connectWifiInfo.append("信号强度：" + wifiInfo.getWifiStrength() + "\n");
-            try {
-                FileOutputStream outputStream = openFileOutput("data", MODE_APPEND);
-                BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
-                try {
-                    bufferedWriter.write(connectWifiInfo.toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    if (bufferedWriter != null) {
-                        try {
-                            bufferedWriter.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-                outputStream.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (action == com.example.recordwifiinfo.model.WifiInfo.DISCONNECT) {
-            StringBuilder disconnectWifiInfo = new StringBuilder();
-            disconnectWifiInfo.append("断开：" + wifiInfo.getName() + "\n");
-            disconnectWifiInfo.append("断开时间：" + wifiInfo.getDisconnectDate() + "\n");
-            disconnectWifiInfo.append("信号强度：" + wifiInfo.getWifiStrength() + "\n");
-            try {
-                FileOutputStream outputStream = openFileOutput("data", MODE_APPEND);
-                BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
-                try {
-                    bufferedWriter.write(disconnectWifiInfo.toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    if (bufferedWriter != null) {
-                        try {
-                            bufferedWriter.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-                outputStream.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
+        stopService(intent);
     }
 
 
