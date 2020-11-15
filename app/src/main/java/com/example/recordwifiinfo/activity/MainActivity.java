@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        intent=new Intent(this, MyService.class);
+        intent = new Intent(this, MyService.class);
         if (ContextCompat.checkSelfPermission(this, android.Manifest
                 .permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{android.Manifest
@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
         });
         wifiInfo = new com.example.recordwifiinfo.model.WifiInfo();
     }
+
     public void startFloatingService() {
         if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(this, "当前无权限，请授权", Toast.LENGTH_SHORT);

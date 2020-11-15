@@ -42,6 +42,7 @@ import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 
 
 public class MyService extends Service {
+
     WindowManager.LayoutParams layoutParams;
     WindowManager windowManager;
     TextView textView;
@@ -53,7 +54,7 @@ public class MyService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        wifiInfo=new com.example.recordwifiinfo.model.WifiInfo();
+        wifiInfo = new com.example.recordwifiinfo.model.WifiInfo();
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("my_service", "记录wifi信息service通知",
@@ -69,6 +70,7 @@ public class MyService extends Service {
         startForeground(1, notification);
         registerReceiver();
     }
+
     private void registerReceiver() {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
@@ -76,6 +78,7 @@ public class MyService extends Service {
         wifiChangeReceiver = new WifiChangeReceiver();
         registerReceiver(wifiChangeReceiver, intentFilter);
     }
+
     class WifiChangeReceiver extends BroadcastReceiver {
 
         @Override
@@ -111,13 +114,15 @@ public class MyService extends Service {
 
         }
     }
-    int getWifiStrength() {
+
+    private int getWifiStrength() {
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
         WifiInfo info = wifiManager.getConnectionInfo();
         int strength = info.getRssi();
         return strength;
     }
-    void recordWifiInfo(int action) {
+
+    private void recordWifiInfo(int action) {
         if (action == com.example.recordwifiinfo.model.WifiInfo.CONNECT) {
             StringBuilder connectWifiInfo = new StringBuilder();
             connectWifiInfo.append("连接：" + wifiInfo.getName() + "\n");
@@ -236,7 +241,7 @@ public class MyService extends Service {
                 case MotionEvent.ACTION_UP:
                     int lastX = (int) event.getRawX();
                     int lastY = (int) event.getRawY();
-                    if (Math.abs(startX - lastX) < 1.5 && Math.abs(startY - lastY) < 1.5){
+                    if (Math.abs(startX - lastX) < 1.5 && Math.abs(startY - lastY) < 1.5) {
                         Intent intent = new Intent(getApplicationContext(), MainActivity.class);
                         intent.addFlags(FLAG_ACTIVITY_NEW_TASK);
                         startActivity(intent);
