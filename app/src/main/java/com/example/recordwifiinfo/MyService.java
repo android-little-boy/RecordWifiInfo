@@ -28,6 +28,7 @@ import android.widget.TextView;
 import androidx.core.app.NotificationCompat;
 
 import com.example.recordwifiinfo.activity.MainActivity;
+import com.huaweisoft.ihvc.IHTts;
 
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
@@ -93,6 +94,7 @@ public class MyService extends Service {
                         wifiInfo.setConnectDate(dateFormat.format(new Date()));
                         wifiInfo.setWifiStrength(getWifiStrength());
                         recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.CONNECT);
+                        IHTts.getInstance().play("wifi已连接");
                     }
                     wifiInfo.setDisconnectDate("");
                     wifiInfo.setWifiStrength(getWifiStrength());
@@ -102,7 +104,7 @@ public class MyService extends Service {
                     if (!"".equals(wifiInfo.getName())) {
                         wifiInfo.setDisconnectDate(dateFormat.format(new Date()));
                         recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.DISCONNECT);
-                        Log.d("ddaaas", "onReceive: " + wifiInfo.getName());
+                        IHTts.getInstance().play("wifi已断开");
                     }
                     textView.setText("断开：" + wifiInfo.getName());
                     wifiInfo.setName("");
