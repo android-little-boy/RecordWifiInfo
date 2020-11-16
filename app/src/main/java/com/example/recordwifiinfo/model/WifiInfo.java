@@ -11,6 +11,13 @@ public class WifiInfo {
     public final static int CONNECT = 1;
     public final static int DISCONNECT = 0;
 
+    public WifiInfo() {
+        name = "";
+        connectDate = "";
+        disconnectDate = "";
+        wifiStrength = 0;
+    }
+
     public String getName() {
         return name;
     }

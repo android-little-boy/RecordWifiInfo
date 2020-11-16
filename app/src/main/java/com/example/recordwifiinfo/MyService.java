@@ -46,7 +46,7 @@ public class MyService extends Service {
     WindowManager.LayoutParams layoutParams;
     WindowManager windowManager;
     TextView textView;
-    LinearLayout floatingView;
+    View floatingView;
     com.example.recordwifiinfo.model.WifiInfo wifiInfo;
     WifiChangeReceiver wifiChangeReceiver;
 
@@ -54,7 +54,6 @@ public class MyService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        wifiInfo = new com.example.recordwifiinfo.model.WifiInfo();
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("my_service", "记录wifi信息service通知",
@@ -68,7 +67,6 @@ public class MyService extends Service {
                 .setContentIntent(pi)
                 .build();
         startForeground(1, notification);
-        registerReceiver();
     }
 
     private void registerReceiver() {
@@ -87,9 +85,11 @@ public class MyService extends Service {
                 NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
                 NetworkInfo.State state = networkInfo.getState();
                 DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+                WifiInfo info = wifiManager.getConnectionInfo();
                 if (state == NetworkInfo.State.CONNECTED) {
-                    if (!networkInfo.getExtraInfo().equals(wifiInfo.getName())) {
-                        wifiInfo.setName(networkInfo.getExtraInfo());
+                    if (!info.getSSID().equals(wifiInfo.getName())) {
+                        wifiInfo.setName(info.getSSID());
                         wifiInfo.setConnectDate(dateFormat.format(new Date()));
                         wifiInfo.setWifiStrength(getWifiStrength());
                         recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.CONNECT);
@@ -104,7 +104,7 @@ public class MyService extends Service {
                         recordWifiInfo(com.example.recordwifiinfo.model.WifiInfo.DISCONNECT);
                         Log.d("ddaaas", "onReceive: " + wifiInfo.getName());
                     }
-                    textView.setText("断开" + wifiInfo.getName());
+                    textView.setText("断开：" + wifiInfo.getName());
                     wifiInfo.setName("");
                 }
             }
@@ -185,7 +185,10 @@ public class MyService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d("cheshi", "onStartCommand: ");
         showFloatingWindow();
+        wifiInfo = new com.example.recordwifiinfo.model.WifiInfo();
+        registerReceiver();
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -197,7 +200,7 @@ public class MyService extends Service {
 
             // 新建悬浮窗控件
             LayoutInflater layoutInflater = LayoutInflater.from(this);
-            floatingView = (LinearLayout) layoutInflater.inflate(R.layout.floating_window, null);
+            floatingView = layoutInflater.inflate(R.layout.floating_window, null);
             floatingView.setOnTouchListener(new FloatingOnTouchListener());
             textView = floatingView.findViewById(R.id.textView2);
             textView.setSelected(true);
@@ -214,8 +217,8 @@ public class MyService extends Service {
             layoutParams.format = PixelFormat.RGBA_8888;
             layoutParams.width = 400;
             layoutParams.height = 200;
-            layoutParams.x = 300;
-            layoutParams.y = 300;
+            layoutParams.x = 0;
+            layoutParams.y = -300;
 
             // 将悬浮窗控件添加到WindowManager
             windowManager.addView(floatingView, layoutParams);
@@ -271,7 +274,9 @@ public class MyService extends Service {
         if (wifiChangeReceiver != null) {
             unregisterReceiver(wifiChangeReceiver);
         }
-        windowManager.removeView(floatingView);
+        if (floatingView!=null) {
+            windowManager.removeView(floatingView);
+        }
     }
 
     @Override
