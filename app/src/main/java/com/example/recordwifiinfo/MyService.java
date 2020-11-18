@@ -22,19 +22,14 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.core.app.NotificationCompat;
 
 import com.example.recordwifiinfo.activity.MainActivity;
+import com.huaweisoft.ihsavetxt.TxtFile;
 import com.huaweisoft.ihvc.IHTts;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -130,58 +125,15 @@ public class MyService extends Service {
             connectWifiInfo.append("连接：" + wifiInfo.getName() + "\n");
             connectWifiInfo.append("连接时间：" + wifiInfo.getConnectDate() + "\n");
             connectWifiInfo.append("信号强度：" + wifiInfo.getWifiStrength() + "\n");
-            try {
-                FileOutputStream outputStream = openFileOutput("data", MODE_APPEND);
-                BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
-                try {
-                    bufferedWriter.write(connectWifiInfo.toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    if (bufferedWriter != null) {
-                        try {
-                            bufferedWriter.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-                outputStream.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            TxtFile.save("wifiinfo","data.txt",connectWifiInfo.toString());
         }
         if (action == com.example.recordwifiinfo.model.WifiInfo.DISCONNECT) {
             StringBuilder disconnectWifiInfo = new StringBuilder();
             disconnectWifiInfo.append("断开：" + wifiInfo.getName() + "\n");
             disconnectWifiInfo.append("断开时间：" + wifiInfo.getDisconnectDate() + "\n");
             disconnectWifiInfo.append("信号强度：" + wifiInfo.getWifiStrength() + "\n");
-            try {
-                FileOutputStream outputStream = openFileOutput("data", MODE_APPEND);
-                BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream));
-                try {
-                    bufferedWriter.write(disconnectWifiInfo.toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    if (bufferedWriter != null) {
-                        try {
-                            bufferedWriter.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-                outputStream.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            TxtFile.save("wifiinfo","data.txt",disconnectWifiInfo.toString());
         }
-
     }
 
 
